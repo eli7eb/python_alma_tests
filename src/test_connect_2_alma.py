@@ -74,31 +74,36 @@ def retrieve_bibs_in_collection(collection_id,offset,limit):
 
 # original request
 # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/990013500690402791/representations?limit=10&offset=0&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
+# returns a dictionary of mms_id and title link amd rep_id
 def retrieve_digital_representations(mms_data,offset,limit):
     alma_bibs_offset = '?offset='
     alma_bibs_limit = '&limit='
+    mms_dict = {}
+    for id in mms_data:
+        mms_id = id['mms_id']
 
-    mms_id =  mms_data[0]['mms_id']
-    print ('retrieve_digital_representations')
-    # original is
-    # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/8180019930000562/representations?limit=100&offset=0&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
-    try:
-        call_params = alma_bibs_offset + str(offset) + alma_bibs_limit + str(limit)
-        request_str = alma_host + alma_path + alma_bibs + "/" + mms_id + alma_representations + call_params + API_KEY + alma_format
-        print ('request {}'.format(request_str))
-        response = requests.request("GET", request_str)
-        response.raise_for_status()
-    except requests.exceptions.ConnectionError as c_err:
-        print(c_err)
-    except requests.exceptions.HTTPError as err:  # This is the correct syntax
-        print('error code ' + err)
-    if response.status_code == 200:
-        print('success code ' + str(response.status_code) + ' type ' +  str(type(response)) + ' type content ' + str(type(response.content)))
-        data = json.loads(response.content)
-        print(json.dumps(data, indent=4, sort_keys=True))
-        data_rep_list = data['representation'][0]
-        rep_id = data_rep_list['id']
-        return mms_id, rep_id # list of rep_id
+
+        print ('retrieve_digital_representations')
+        # original is
+        # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/8180019930000562/representations?limit=100&offset=0&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
+        try:
+            call_params = alma_bibs_offset + str(offset) + alma_bibs_limit + str(limit)
+            request_str = alma_host + alma_path + alma_bibs + "/" + mms_id + alma_representations + call_params + API_KEY + alma_format
+            print ('request {}'.format(request_str))
+            response = requests.request("GET", request_str)
+            response.raise_for_status()
+        except requests.exceptions.ConnectionError as c_err:
+            print(c_err)
+        except requests.exceptions.HTTPError as err:  # This is the correct syntax
+            print('error code ' + err)
+        if response.status_code == 200:
+            print('success code ' + str(response.status_code) + ' type ' +  str(type(response)) + ' type content ' + str(type(response.content)))
+            data = json.loads(response.content)
+            print(json.dumps(data, indent=4, sort_keys=True))
+            data_rep_list = data['representation'][0]
+            mms_dict[mms_id] = data['representation']
+            rep_id = data_rep_list['id']
+    return mms_dict # dict of representations of mms_id's
 
 # collection_id for api consul
 # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/collections/8180019930000562?level=1&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
@@ -135,53 +140,64 @@ def retrieve_collection(collection_id, level):
 
 # original request
 #​/almaws​/v1​/bibs​/{mms_id}​/representations​/{rep_id}​/files Retrieve Representation Files' Details
-def retrieve_representation_files_details(mms_id, rep_id):
+def retrieve_representation_files_details(mms_dict):
     print ('retrieve_representation_files_details')
-    try:
-        request_str = alma_host  + alma_path + alma_bibs + '/' + mms_id + alma_representations + '/' + rep_id + alma_files + API_KEY_FIRST + alma_format
-        response = requests.request("GET", request_str)
-        response.raise_for_status()
-    except requests.exceptions.ConnectionError as c_err:
-        print(c_err)
-    except requests.exceptions.HTTPError as err:  # This is the correct syntax
-        print('error code ' + err)
-    if response.status_code == 200:
-        data = json.loads(response.content)
-        print(json.dumps(data, indent=4, sort_keys=True))
-        p_list = data['representation_file'][0]
-        p_id = p_list['pid']
-        return p_id  # list of rep_id
+    images_file_data = {}
+    for mms_id, rep_item in mms_dict.items():
+        rep_id = rep_item[0]['id']
+        try:
+            request_str = alma_host  + alma_path + alma_bibs + '/' + mms_id + alma_representations + '/' + rep_id + alma_files + API_KEY_FIRST + alma_format
+            response = requests.request("GET", request_str)
+            response.raise_for_status()
+        except requests.exceptions.ConnectionError as c_err:
+            print(c_err)
+        except requests.exceptions.HTTPError as err:  # This is the correct syntax
+            print('error code ' + err)
+        if response.status_code == 200:
+            data = json.loads(response.content)
+            print(json.dumps(data, indent=4, sort_keys=True))
+            p_list = data['representation_file'][0]
+            images_file_data[mms_id] = rep_item,p_list
+    return images_file_data  # list of rep_id
 
 # original request
 # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/99215535900562/representations/99215535900562?apikey=l7xx2af7939c63424511946e0fcdc35fe22a
-def retrieve_representation_details(mms_id, rep_id):
+def retrieve_representation_details(mms_dict):
     print ('retrieve_representation_details')
-    try:
-        request_str = alma_host  + alma_path + alma_bibs + '/' + mms_id + alma_representations + '/' + rep_id + API_KEY_FIRST + alma_format
-        response = requests.request("GET", request_str)
-        response.raise_for_status()
-    except requests.exceptions.ConnectionError as c_err:
-        print(c_err)
-    except requests.exceptions.HTTPError as err:  # This is the correct syntax
-        print('error code ' + err)
-    if response.status_code == 200:
-        data = json.loads(response.content)
-        print(json.dumps(data, indent=4, sort_keys=True))
+    for mms_id, rep_item in mms_dict.items():
+        rep_id = rep_item[0]['id']
+        try:
+            request_str = alma_host  + alma_path + alma_bibs + '/' + mms_id + alma_representations + '/' + rep_id + API_KEY_FIRST + alma_format
+            response = requests.request("GET", request_str)
+            response.raise_for_status()
+        except requests.exceptions.ConnectionError as c_err:
+            print(c_err)
+        except requests.exceptions.HTTPError as err:  # This is the correct syntax
+            print('error code ' + err)
+        if response.status_code == 200:
+            data = json.loads(response.content)
+            print(json.dumps(data, indent=4, sort_keys=True))
 
 # /almaws/v1/bibs/{mms_id}/representations/{rep_id}/files/{file_id} Retrieve Representation File Details
-def retrieve_representation_file_details(mms_id, rep_id, file_id):
+def retrieve_representation_file_details(image_dict):
     print ('retrieve_representation_file_details')
-    try:
-        request_str = alma_host  + alma_path + alma_bibs + '/' + mms_id + alma_representations + '/' + rep_id + alma_files + '/' + file_id + API_KEY_FIRST + alma_format
-        response = requests.request("GET", request_str)
-        response.raise_for_status()
-    except requests.exceptions.ConnectionError as c_err:
-        print(c_err)
-    except requests.exceptions.HTTPError as err:  # This is the correct syntax
-        print('error code ' + err)
-    if response.status_code == 200:
-        data = json.loads(response.content)
-        print(json.dumps(data, indent=4, sort_keys=True))
+    for mms_id, image_item in image_dict.items():
+        rep_object= image_item[0]
+        file_object = image_item[1]
+        # rep_item is a tuple
+        rep_id = rep_object[0]['id']
+        file_id = file_object['pid']
+        try:
+            request_str = alma_host  + alma_path + alma_bibs + '/' + mms_id + alma_representations + '/' + rep_id + alma_files + '/' + file_id + API_KEY_FIRST + alma_format
+            response = requests.request("GET", request_str)
+            response.raise_for_status()
+        except requests.exceptions.ConnectionError as c_err:
+            print(c_err)
+        except requests.exceptions.HTTPError as err:  # This is the correct syntax
+            print('error code ' + err)
+        if response.status_code == 200:
+            data = json.loads(response.content)
+            print(json.dumps(data, indent=4, sort_keys=True))
 
 
 print('retrieve collections')
@@ -192,11 +208,11 @@ collection_get_level = 2
 mms_tuple = retrieve_collection(collection_id, collection_get_level)
 # TODO make sure I have all more than 100 sometimes
 mms_id_data = retrieve_bibs_in_collection(collection_id,0,10)
-mms_id, rep_id = retrieve_digital_representations(mms_id_data, 0, 10)
+mms_dict = retrieve_digital_representations(mms_id_data, 0, 10)
 
 #​/almaws​/v1​/bibs​/{mms_id}​/representations​/{rep_id} Retrieve Representation Details
-retrieve_representation_details(mms_id, rep_id)
+retrieve_representation_details(mms_dict)
 #​/almaws​/v1​/bibs​/{mms_id}​/representations​/{rep_id}​/files Retrieve Representation Files' Details
-file_id = retrieve_representation_files_details(mms_id, rep_id)
+image_dict = retrieve_representation_files_details(mms_dict)
 # /almaws/v1/bibs/{mms_id}/representations/{rep_id}/files/{file_id} Retrieve Representation File Details
-retrieve_representation_file_details(mms_id, rep_id, file_id)
+retrieve_representation_file_details(image_dict)
