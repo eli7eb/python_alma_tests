@@ -1,5 +1,6 @@
 import requests
 import json
+from json2html import *
 
 # original request
 # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/collections/81174994600002791?level=1&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
@@ -28,6 +29,29 @@ headers = {'Content-Type': 'application/json',
                    'Authorization': 'Bearer {0}'.format(API_KEY)}
 
 haifa_url_call_end = '\''
+# test api key
+# original request
+# https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/test?apikey=l7xx2af7939c63424511946e0fcdc35fe22a
+#
+def test_api_key():
+    print ('test_api_key')
+    # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/test?apikey=l7xx2af7939c63424511946e0fcdc35fe22a
+    request_str = alma_host + alma_path + alma_bibs + alma_test_api + alma_format
+    try:
+        print('request {}'.format(request_str))
+        response = requests.request("GET", request_str)
+        response.raise_for_status()
+    except requests.exceptions.ConnectionError as c_err:
+        print(c_err)
+    except requests.exceptions.HTTPError as err:  # This is the correct syntax
+        print('error code ' + err)
+    if response.status_code == 200:
+        print('success code ' + str(response.status_code) + ' type ' + str(type(response)) + ' type content ' + str(
+            type(response.content)))
+        data = json.loads(response.text)
+        print(json.dumps(data, indent=4, sort_keys=True))
+
+    print('test_api_key end')
 
 def retrieve_collections():
     # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/collections?level=1&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
@@ -48,6 +72,10 @@ def retrieve_collections():
         print('success code ' + str(response.status_code) + ' type ' +  str(type(response)) + ' type content ' + str(type(response.content)))
         data = json.loads(response.content)
         print(json.dumps(data, indent=4, sort_keys=True))
+        collections = data['collection']
+        create_html_table('collections list',collections,'collections_list_file.html')
+        for c in collections:
+            print ('collection id {} name {}'.format(str(c['pid']['value']), c['name']))
     print ('retrieve_collections end')
 
 
@@ -69,8 +97,70 @@ def retrieve_bibs_in_collection(collection_id,offset,limit):
     if response.status_code == 200:
         print('success code ' + str(response.status_code) + ' type ' +  str(type(response)) + ' type content ' + str(type(response.content)))
         data = json.loads(response.content)
+        bibs = data['bib']
+        for b in bibs:
+            print('bib id {} name {}'.format(str(b['mms_id']), b['title']))
         print(json.dumps(data, indent=4, sort_keys=True))
+    html_table = json2html.convert(json=data)
+    create_html('bibs in collection ID {}'.format(collection_id), html_table,'bibs_file.html')
     return data['bib']
+
+def create_html_table(title,data,file_name):
+    print('create_html')
+    html = "<html>\n<head></head>\n<style>p { margin: 0 !important; }</style>\n<body>\n"
+    html += '\n<p>' + title + '</p>\n'
+    # header
+    html += '\n<table\>'
+    html += '\n<tr\>'
+    html += '\n<th\>' + 'id' + '</th>\n'
+    html += '\n<th\>' + 'name' + '</th>\n'
+    html += '\n<th\>' + 'description' + '</th>\n'
+
+    for c in data:
+        # each is td
+        html += '\n<tr\>'
+        html += '\n<td\>' + str(c['pid']['value']) + '</td>\n'
+        html += '\n<td\>' + str(c['name']) + '</td>\n'
+        html += '\n<td\>' + c['description'] + '</td>\n'
+        html += '\n</tr>\n'
+        print('collection id {} name {}'.format(str(c['pid']['value']), c['name']))
+    html += '\n</table>\n'
+    try:
+        with open(file_name, 'w') as f:
+            #f.write(html + "\n</body>\n</html>")
+            f.writelines(html)
+
+    except IOError as err:
+        print('err')
+    f.close()
+# TODO check for valid title
+def create_html(title, data,file_name):
+    print('create_html')
+    html = "<html>\n<head></head>\n<style>p { margin: 0 !important; }</style>\n<body>\n"
+    html += '\n<p>' + title + '</p>\n'
+    html += '\n<p>' + data + '</p>\n'
+
+    #for line in Alist:
+    #    para = '<p>' + ', '.join(line) + '</p>\n'
+    #    html += para
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(html + "\n</body>\n</html>")
+    except IOError as err:
+        print ('err')
+
+
+
+
+
+Alist = [['123', 'user1', 'New Compressed (zipped) Folder.zip', '05-24-17'],
+         ['123', 'user2', 'Iam.zip', '05-19-17'], ['abcd', 'Letsee.zip', '05-22-17'],
+         ['Here', 'whichTwo.zip', '06-01-17']]
+
+
+
+
 
 # original request
 # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/990013500690402791/representations?limit=10&offset=0&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
@@ -199,7 +289,7 @@ def retrieve_representation_file_details(image_dict):
             data = json.loads(response.content)
             print(json.dumps(data, indent=4, sort_keys=True))
 
-
+# test_api_key()
 print('retrieve collections')
 retrieve_collections()
 print('start test on collection ID')
