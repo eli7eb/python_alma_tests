@@ -15,7 +15,7 @@ alma_path = "/almaws/v1/bibs"
 
 def test_api_key():
     try:
-        request_str = alma_haifa_host  + alma_path + alma_test_api
+        request_str = alma_haifa_host + alma_path + alma_test_api
         response = requests.request("GET", request_str)
         response.raise_for_status()
     except requests.exceptions.ConnectionError as c_err:
@@ -29,9 +29,7 @@ def test_api_key():
             json_obj = response.text # json.loads(response.content)
         except Exception as e:
             print (e)
-
-        print(response.text)
-
+    print('response {}'.format(str(response.text)))
 
 
 print('start test on api key')

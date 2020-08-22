@@ -101,7 +101,6 @@ def retrieve_bibs_in_collection(collection_id,offset,limit):
         for b in bibs:
             print('bib id {} name {}'.format(str(b['mms_id']), b['title']))
         print(json.dumps(data, indent=4, sort_keys=True))
-    html_table = json2html.convert(json=data)
     #create_html('bibs in collection ID {}'.format(collection_id), html_table,'bibs_file.html')
     return data['bib']
 
@@ -146,37 +145,45 @@ def create_html_4_collection_list(title,data,file_name):
     fileout.writelines(table)
     fileout.close()
 
+def create_html_4_collection(title,data,file_name):
+    print('create_html_4_collection')
+    fileout = open(file_name, "w")
+    table = "<html>"
+    table += "\n<head>"
+    table += '\n<title>' + title + '</title>\n'
+    style = "<style>"
+    style += "p { margin: 0 !important;  }"
+    style +=  "table ,td,th {table-layout: fixed; border-collapse: separate ;border: 1px solid black;} "
+    style += "</style>"
+    table += style
+        # "</head>\n<style>p { margin: 0 !important;  } table {table-layout: fixed; border-collapse: collapse;border: 1px solid black;} </style>"
 
-def create_html_table(title,data,file_name):
-    print('create_html')
-    html = "<html>\n<head></head>\n<style>p { margin: 0 !important; }</style>\n<body>\n"
-    html += '\n<p>' + title + '</p>\n'
-    # header
-    html += '\n<table\>'
-    html += '\n<tr\>'
-    html += '\n<th\>' + 'id' + '</th>\n'
-    html += '\n<th\>' + 'name' + '</th>\n'
-    html += '\n<th\>' + 'description' + '</th>\n'
 
-    for c in data:
-        # each is td
-        html += '\n<tr\>'
-        html += '\n<td\>' + str(c['pid']['value']) + '</td>\n'
-        html += '\n<td\>' + str(c['name']) + '</td>\n'
-        html += '\n<td\>' + c['description'] + '</td>\n'
-        html += '\n</tr>\n'
-        print('collection id {} name {}'.format(str(c['pid']['value']), c['name']))
-    html += '\n</table>\n'
-    html += '</p>\n'
-    try:
-        with open(file_name, 'w') as f:
-            #f.write(html + "\n</body>\n</html>")
-            f.writelines(html)
+    table += "\n<body>\n"
+    table += '\n<p>'
+    table += '\n<h1>' + title + '</h1>\n'
+    table += '</p>\n'
+    table += '\n<p>'
+    table += "<table>\n"
+    table += "  <tr>\n"
+    header = ['id','name','description']
+    table += "  <tr>\n"
+    for line in header:
+        table += "    <td>{0}</td>\n".format(line)
+    table += "  </tr>\n"
 
-    except IOError as err:
-        print('err')
-    f.close()
-
+    for line in data:
+        table += "  <tr>\n"
+        table += "    <td>{0}</td>\n".format(str(line['pid']['value']))
+        table += "    <td>{0}</td>\n".format(str(line['name']))
+        table += "    <td>{0}</td>\n".format(str(line['description']))
+        table += "  </tr>\n"
+    table += "</table>"
+    table += '</p>\n'
+    table += '</body>\n'
+    table += "</html>"
+    fileout.writelines(table)
+    fileout.close()
 
 
 # original request
@@ -242,6 +249,7 @@ def retrieve_collection(collection_id, level):
         if 'description' in data:
             mms_description = data['description']
             print('mms_description {}'.format(mms_description))
+
     print('retrieve_collection end')
     return mms_id_object, mms_name, mms_description
 
@@ -309,10 +317,10 @@ def retrieve_representation_file_details(image_dict):
 # test_api_key()
 print('retrieve collections')
 retrieve_collections()
-# print('start test on collection ID')
-# collection_id = '81165295290002791'
-# collection_get_level = 2
-# mms_tuple = retrieve_collection(collection_id, collection_get_level)
+print('start test on collection ID')
+collection_id = '81165295290002791'
+collection_get_level = 2
+mms_tuple = retrieve_collection(collection_id, collection_get_level)
 # # TODO make sure I have all more than 100 sometimes
 # mms_id_data = retrieve_bibs_in_collection(collection_id,0,10)
 # mms_dict = retrieve_digital_representations(mms_id_data, 0, 10)
