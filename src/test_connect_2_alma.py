@@ -101,9 +101,50 @@ def retrieve_bibs_in_collection(collection_id,offset,limit):
         for b in bibs:
             print('bib id {} name {}'.format(str(b['mms_id']), b['title']))
         print(json.dumps(data, indent=4, sort_keys=True))
-    #create_html('bibs in collection ID {}'.format(collection_id), html_table,'bibs_file.html')
+
     return data['bib']
 
+def create_html_4_mms_id(mms_dict,title,file_name):
+
+    print('create_html_4_mms_id')
+    fileout = open(file_name, "w")
+    table = "<html>"
+    table += "\n<head>"
+    table += '\n<title>' + title + '</title>\n'
+    style = "<style>"
+    style += "p { margin: 0 !important;  }"
+    style += "table ,td,th {table-layout: fixed; border-collapse: separate ;border: 1px solid black;} "
+    style += "</style>"
+    table += style
+    # "</head>\n<style>p { margin: 0 !important;  } table {table-layout: fixed; border-collapse: collapse;border: 1px solid black;} </style>"
+
+    table += "\n<body>\n"
+    table += '\n<p>'
+    table += '\n<h1>' + title + '</h1>\n'
+    table += '</p>\n'
+    table += '\n<p>'
+    table += "<table>\n"
+    table += "  <tr>\n"
+    header = ['id', 'delivery_url', 'thumbnail']
+    table += "  <tr>\n"
+    for line in header:
+        table += "    <td>{0}</td>\n".format(line)
+    table += "  </tr>\n"
+
+    for line_data in mms_dict.items():
+        line = line_data[1][0]
+        table += "  <tr>\n"
+        table += "    <td>{0}</td>\n".format(str(line['id']))
+        table += "    <td>{0}</td>\n".format(str(line['delivery_url']))
+        thumb_link = '<a href = {0!s}>thumbnail</a>'.format(line['thumbnail_url'])
+        table += "    <td>{0!s}</td>\n".format(thumb_link)
+        table += "  </tr>\n"
+    table += "</table>"
+    table += '</p>\n'
+    table += '</body>\n'
+    table += "</html>"
+    fileout.writelines(table)
+    fileout.close()
 
 def create_html_4_collection_list(title,data,file_name):
     print('create_html_4_collection_list')
@@ -144,6 +185,7 @@ def create_html_4_collection_list(title,data,file_name):
     table += "</html>"
     fileout.writelines(table)
     fileout.close()
+
 
 def create_html_4_collection(title,data,file_name):
     print('create_html_4_collection')
@@ -189,14 +231,12 @@ def create_html_4_collection(title,data,file_name):
 # original request
 # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/990013500690402791/representations?limit=10&offset=0&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
 # returns a dictionary of mms_id and title link amd rep_id
-def retrieve_digital_representations(mms_data,offset,limit):
+def retrieve_digital_representations(colletion_id, mms_data,offset,limit):
     alma_bibs_offset = '?offset='
     alma_bibs_limit = '&limit='
     mms_dict = {}
     for id in mms_data:
         mms_id = id['mms_id']
-
-
         print ('retrieve_digital_representations')
         # original is
         # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/8180019930000562/representations?limit=100&offset=0&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
@@ -216,7 +256,9 @@ def retrieve_digital_representations(mms_data,offset,limit):
             print(json.dumps(data, indent=4, sort_keys=True))
             data_rep_list = data['representation'][0]
             mms_dict[mms_id] = data['representation']
-            rep_id = data_rep_list['id']
+    mms_file_name = 'mms_list_collection_id_{0!s}.html'.format(colletion_id)
+    title = 'mms list 4 collection {0!s}'.format(colletion_id)
+    create_html_4_mms_id(mms_dict,'title',mms_file_name)
     return mms_dict # dict of representations of mms_id's
 
 # collection_id for api consul
@@ -240,6 +282,9 @@ def retrieve_collection(collection_id, level):
     if response.status_code == 200:
         data = json.loads(response.content)
         print(json.dumps(data, indent=4, sort_keys=True))
+        if 'parent_pid' in data:
+            parent_pid_object = data['parent_pid'] if data['parent_pid'] else None
+            print ('mms_id {}'.format(data["parent_pid"]))
         if 'mms_id' in data:
             mms_id_object = data['mms_id']
             print ('mms_id {}'.format(data["mms_id"]))
@@ -251,7 +296,8 @@ def retrieve_collection(collection_id, level):
             print('mms_description {}'.format(mms_description))
 
     print('retrieve_collection end')
-    return mms_id_object, mms_name, mms_description
+    collection_info_dict = dict(collection_parent=parent_pid_object, collection_mms_id=mms_id_object, collection_name=mms_name, collection_desc=mms_description)
+    return collection_info_dict
 
 # original request
 #​/almaws​/v1​/bibs​/{mms_id}​/representations​/{rep_id}​/files Retrieve Representation Files' Details
@@ -320,11 +366,15 @@ retrieve_collections()
 print('start test on collection ID')
 collection_id = '81165295290002791'
 collection_get_level = 2
-mms_tuple = retrieve_collection(collection_id, collection_get_level)
+# returns a dict w parent mms_id collection_name collection_desc
+collection_dict = retrieve_collection(collection_id, collection_get_level)
 # # TODO make sure I have all more than 100 sometimes
-# mms_id_data = retrieve_bibs_in_collection(collection_id,0,10)
-# mms_dict = retrieve_digital_representations(mms_id_data, 0, 10)
-#
+mms_id_data = retrieve_bibs_in_collection(collection_id,0,10)
+print ('digital representations part')
+# # digital representations part
+# /almaws/v1/bibs/{mms_id}/representations
+# This web service returns a list of Digital Representations for a given Bib MMS-ID.
+mms_dict = retrieve_digital_representations(collection_id,mms_id_data, 0, 10)
 # #​/almaws​/v1​/bibs​/{mms_id}​/representations​/{rep_id} Retrieve Representation Details
 # retrieve_representation_details(mms_dict)
 # #​/almaws​/v1​/bibs​/{mms_id}​/representations​/{rep_id}​/files Retrieve Representation Files' Details
