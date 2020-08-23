@@ -125,19 +125,23 @@ def create_html_4_mms_id(mms_dict,title,file_name):
     table += '\n<p>'
     table += "<table>\n"
     table += "  <tr>\n"
-    header = ['id', 'delivery_url', 'thumbnail']
+    header = ['id', 'description', 'delivery_url','thumbnail link', 'thumbnail image']
     table += "  <tr>\n"
     for line in header:
         table += "    <td>{0}</td>\n".format(line)
     table += "  </tr>\n"
 
     for line_data in mms_dict.items():
-        line = line_data[1][0]
+        line = line_data[1]
         table += "  <tr>\n"
         table += "    <td>{0}</td>\n".format(str(line['id']))
-        table += "    <td>{0}</td>\n".format(str(line['delivery_url']))
+        table += "    <td>{0}</td>\n".format(str(line['title']))
+        delivery_link = '<a href = {0!s}>delivery</a>'.format(line['delivery_url'])
+        table += "    <td>{0!s}</td>\n".format(delivery_link)
         thumb_link = '<a href = {0!s}>thumbnail</a>'.format(line['thumbnail_url'])
         table += "    <td>{0!s}</td>\n".format(thumb_link)
+        thumb_image = '<img src = "{0!s}" alt = "image">'.format(line['thumbnail_url'])
+        table += "    <td>{0!s}</td>\n".format(thumb_image)
         table += "  </tr>\n"
     table += "</table>"
     table += '</p>\n'
@@ -255,10 +259,13 @@ def retrieve_digital_representations(colletion_id, mms_data,offset,limit):
             data = json.loads(response.content)
             print(json.dumps(data, indent=4, sort_keys=True))
             data_rep_list = data['representation'][0]
-            mms_dict[mms_id] = data['representation']
+            title_item = {'title':id['title']}
+            data_rep_list.update(title_item)
+
+            mms_dict[mms_id] = data_rep_list
     mms_file_name = 'mms_list_collection_id_{0!s}.html'.format(colletion_id)
     title = 'mms list 4 collection {0!s}'.format(colletion_id)
-    create_html_4_mms_id(mms_dict,'title',mms_file_name)
+    create_html_4_mms_id(mms_dict,title,mms_file_name)
     return mms_dict # dict of representations of mms_id's
 
 # collection_id for api consul
