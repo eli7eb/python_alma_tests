@@ -30,7 +30,7 @@ headers = {'Content-Type': 'application/json',
 
 haifa_url_call_end = '\''
 # one function to handle all ALMA calls and error codes
-def alma_url_call(request_str):
+def alma_url_call(request_str,to_print):
     print('alma_url_call')
     try:
         print('request {}'.format(request_str))
@@ -50,7 +50,8 @@ def alma_url_call(request_str):
     print('success code ' + str(response.status_code) + ' type ' + str(type(response)) + ' type content ' + str(
         type(response.content)))
     data = json.loads(response.text)
-    print(json.dumps(data, indent=4, sort_keys=True))
+    if to_print:
+        print(json.dumps(data, indent=4, sort_keys=True))
 
     print('alma_url_call end ')
     return data
@@ -62,7 +63,7 @@ def test_api_key():
     print ('test_api_key')
     # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/test?apikey=l7xx2af7939c63424511946e0fcdc35fe22a
     request_str = alma_host + alma_path + alma_bibs + alma_test_api + alma_format
-    alma_url_call(request_str)
+    alma_url_call(request_str,True)
     print('test_api_key end')
 
 def retrieve_collections():
@@ -72,7 +73,7 @@ def retrieve_collections():
     collections = "/collections"
     call_params = '?level=1'
     request_str = alma_host + alma_path + alma_bibs + collections + call_params + API_KEY + alma_format
-    data = alma_url_call(request_str)
+    data = alma_url_call(request_str,True)
     collections = data['collection']
     create_html_4_collection_list('collections list',collections,'collections_list_file.html')
     for c in collections:
@@ -88,7 +89,7 @@ def retrieve_total_number_of_bibs_in_collection(collection_id,offset,limit):
 
     call_params = alma_bibs_offset + str(offset) + alma_bibs_limit + str(limit)
     request_str = alma_host + alma_path + alma_bibs + alma_collections + collection_id + alma_bibs + call_params + API_KEY + alma_format
-    data = alma_url_call(request_str)
+    data = alma_url_call(request_str,False)
     bibs = data['bib']
     total_records_count = data['total_record_count']
     for b in bibs:
@@ -99,23 +100,26 @@ def retrieve_total_number_of_bibs_in_collection(collection_id,offset,limit):
 
 # get all mms data calling 100 and then another 100 until total
 # by iteraing the 100 until no more is found
-def retrieve_dict_of_bibs_in_collection(collection_id, total_items):
+def retrieve_list_of_bibs_in_collection(collection_id, total_items):
     print ('retrieve_bibs_in_collection')
     # original is
     # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/collections/81165295290002791/bibs?offset=0&limit=10&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
     offset = 0
     limit = 100
-    mms_dict = {}
+    mms_list = []
     while offset < total_items:
         call_params = alma_bibs_offset + str(offset) + alma_bibs_limit + str(limit)
         request_str = alma_host + alma_path + alma_bibs + alma_collections + collection_id + alma_bibs + call_params + API_KEY + alma_format
-        data = alma_url_call(request_str)
+        data = alma_url_call(request_str,False)
         if 'bib' in data:
             bibs = data['bib']
+            # I want one list so loop over the inner list and append
+            for b in bibs:
+                mms_list.append(b)
             offset += limit
         else:
             print ('check out')
-    return mms_dict
+    return mms_list
 
 def create_html_4_mms_id(mms_dict,title,file_name):
 
@@ -252,24 +256,29 @@ def create_html_4_collection(title,data,file_name):
 # original request
 # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/990013500690402791/representations?limit=10&offset=0&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
 # returns a dictionary of mms_id and title link amd rep_id
-def retrieve_digital_representations(colletion_id, mms_data,offset,limit,total_items):
+def retrieve_digital_representations(colletion_id, mms_list_data):
+    offset = 0
+    limit = 100
+    count = 0
     alma_bibs_offset = '?offset='
     alma_bibs_limit = '&limit='
     mms_dict = {}
-    while offset < total_items:
-        for id in mms_data:
-            mms_id = id['mms_id']
-            print ('retrieve_digital_representations offset {} total {}'.format(str(offset),str(total_items)))
-            # original is
-            # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/8180019930000562/representations?limit=100&offset=0&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
-            call_params = alma_bibs_offset + str(offset) + alma_bibs_limit + str(limit)
-            request_str = alma_host + alma_path + alma_bibs + "/" + mms_id + alma_representations + call_params + API_KEY + alma_format
-            data = alma_url_call(request_str)
-            data_rep_list = data['representation'][0]
-            title_item = {'title':id['title']}
-            data_rep_list.update(title_item)
-            mms_dict[mms_id] = data_rep_list
-            offset += 100
+    for l in mms_list_data:
+        mms_id = l['mms_id']
+        print ('retrieve_digital_representations count {} total {}'.format(str(count),str(len(mms_list_data))))
+        # original is
+        # https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/8180019930000562/representations?limit=100&offset=0&apikey=l7xx2af7939c63424511946e0fcdc35fe22a
+        call_params = alma_bibs_offset + str(offset) + alma_bibs_limit + str(limit)
+        request_str = alma_host + alma_path + alma_bibs + "/" + mms_id + alma_representations + call_params + API_KEY + alma_format
+        data = alma_url_call(request_str,False)
+        data_rep_list = data['representation'][0]
+        title_item = {'title':l['title']}
+        data_rep_list.update(title_item)
+        mms_dict[mms_id] = data_rep_list
+        count += 1
+        if count == 150:
+            break
+
     mms_file_name = 'mms_list_collection_id_{0!s}.html'.format(colletion_id)
     title = 'mms list 4 collection {0!s}'.format(colletion_id)
     create_html_4_mms_id(mms_dict,title,mms_file_name)
@@ -286,7 +295,7 @@ def retrieve_collection_information(collection_id, level):
     get_level = alma_params_level + str(level)
     alma_params = '&expand=d_avail'
     request_str = alma_host  + alma_path + alma_bibs + alma_collections + collection_id  + get_level + alma_params + API_KEY + alma_format
-    data = alma_url_call(request_str)
+    data = alma_url_call(request_str,False)
     if 'parent_pid' in data:
         parent_pid_object = data['parent_pid'] if data['parent_pid'] else None
         print ('mms_id {}'.format(data["parent_pid"]))
@@ -312,7 +321,7 @@ def retrieve_representation_files_details(mms_dict):
     for mms_id, rep_item in mms_dict.items():
         rep_id = rep_item[0]['id']
         request_str = alma_host  + alma_path + alma_bibs + '/' + mms_id + alma_representations + '/' + rep_id + alma_files + API_KEY_FIRST + alma_format
-        data = alma_url_call(request_str)
+        data = alma_url_call(request_str,False)
         p_list = data['representation_file'][0]
         images_file_data[mms_id] = rep_item,p_list
     return images_file_data  # list of rep_id
@@ -324,7 +333,7 @@ def retrieve_representation_details(mms_dict):
     for mms_id, rep_item in mms_dict.items():
         rep_id = rep_item[0]['id']
         request_str = alma_host  + alma_path + alma_bibs + '/' + mms_id + alma_representations + '/' + rep_id + API_KEY_FIRST + alma_format
-        data = alma_url_call(request_str)
+        data = alma_url_call(request_str,False)
         print(json.dumps(data, indent=4, sort_keys=True))
 
 # /almaws/v1/bibs/{mms_id}/representations/{rep_id}/files/{file_id} Retrieve Representation File Details
@@ -337,7 +346,7 @@ def retrieve_representation_file_details(image_dict):
         rep_id = rep_object[0]['id']
         file_id = file_object['pid']
         request_str = alma_host  + alma_path + alma_bibs + '/' + mms_id + alma_representations + '/' + rep_id + alma_files + '/' + file_id + API_KEY_FIRST + alma_format
-        data = alma_url_call(request_str)
+        data = alma_url_call(request_str,False)
         print(json.dumps(data, indent=4, sort_keys=True))
 
 # test_api_key()
@@ -353,12 +362,12 @@ collection_dict = retrieve_collection_information(collection_id, collection_get_
 number_of_items = 100
 # # TODO make sure I have all more than 100 sometimes
 total_items = retrieve_total_number_of_bibs_in_collection(collection_id,0,number_of_items)
-mms_dict = count = retrieve_dict_of_bibs_in_collection(collection_id,total_items)
+mms_list = retrieve_list_of_bibs_in_collection(collection_id,total_items)
 print ('digital representations part')
 # # digital representations part
 # /almaws/v1/bibs/{mms_id}/representations
 # This web service returns a list of Digital Representations for a given Bib MMS-ID.
-mms_dict = retrieve_digital_representations(collection_id, 0, number_of_items, total_items)
+mms_dict = retrieve_digital_representations(collection_id, mms_list)
 # #​/almaws​/v1​/bibs​/{mms_id}​/representations​/{rep_id} Retrieve Representation Details
 # retrieve_representation_details(mms_dict)
 # #​/almaws​/v1​/bibs​/{mms_id}​/representations​/{rep_id}​/files Retrieve Representation Files' Details
