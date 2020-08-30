@@ -71,14 +71,28 @@ def retrieve_collections():
 
     print ('retrieve_collections')
     collections = "/collections"
-    call_params = '?level=1'
+    call_params = '?level=2'
     request_str = alma_host + alma_path + alma_bibs + collections + call_params + API_KEY + alma_format
     data = alma_url_call(request_str,True)
     collections = data['collection']
     create_html_4_collection_list('collections list',collections,'collections_list_file.html')
+    create_html_list_of_collection_level_2('collections list level 2',collections,'collections_list_level_2_file.html')
     for c in collections:
         print ('collection id {} name {}'.format(str(c['pid']['value']), c['name']))
     print ('retrieve_collections end')
+    return collections
+
+# original request /almaws/v1/bibs/{mms_id}
+def retrieve_bibs_by_mms_id(collections_list):
+    print('retrieve_bibs_by_mms_id')
+    for c in collections_list:
+        print ('collection')
+        mms_id = str(c['mms_id']['value'])
+        request_str = alma_host + alma_path + alma_bibs + '/' + mms_id + API_KEY_FIRST + alma_format
+        data = alma_url_call(request_str,True)
+
+    print('retrieve_bibs_by_mms_id end')
+
 
 # the first call is a must to set the total number of items in collection
 # it can be done more inteligently if I had more time
@@ -169,6 +183,66 @@ def create_html_4_mms_id(mms_dict,title,file_name):
     fileout.writelines(table)
     fileout.close()
 
+# list of collections and children
+def create_html_list_of_collection_level_2(title,data,file_name):
+    print ('create_html_list_of_collection_level_2')
+    fileout = open(file_name, "w")
+    table = "<html>"
+    table += "\n<head>"
+    table += '\n<title>' + title + '</title>\n'
+    style = "<style>"
+    style += "p { margin: 0 !important;  }"
+    style += "table ,td,th {table-layout: fixed; border-collapse: separate ;border: 1px solid black;} "
+    style += "</style>"
+    table += style
+    # "</head>\n<style>p { margin: 0 !important;  } table {table-layout: fixed; border-collapse: collapse;border: 1px solid black;} </style>"
+
+    table += "\n<body>\n"
+    table += '\n<p>'
+    table += '\n<h1>' + title + '</h1>\n'
+    table += '</p>\n'
+
+    # add for loop for each table, there are few for loops but one table per loop
+    for d in data:
+        table_title = "PID: {} Mms_Id: {} Name: {}".format(str(d['pid']['value']), str(d['mms_id']['value']), str(d['name']))
+        table += '\n<p>'
+        table += '\n<h2>' + table_title + '</h2>\n'
+        table += '</p>\n'
+        table += '\n<p>'
+        table += "<table>\n"
+        table += "  <tr>\n"
+        header = ['counter', 'pid', 'mms_id', 'name', 'description']
+        table += "  <tr>\n"
+        for line in header:
+            table += "    <td>{0}</td>\n".format(line)
+        table += "  </tr>\n"
+        counter = 1
+        if 'collection' in d.keys():
+            for c in d['collection']:
+                table += "  <tr>\n"
+                table += "    <td>{0}</td>\n".format(str(counter))
+                table += "    <td>{0}</td>\n".format(str(c['pid']['value']))
+                table += "    <td>{0}</td>\n".format(str(c['mms_id']['value']))
+                table += "    <td>{0}</td>\n".format(str(c['name']))
+                table += "    <td>{0}</td>\n".format(str(c['description']))
+                counter += 1
+                table += "  </tr>\n"
+            table += "</table>"
+            table += '</p>\n'
+            table += '</body>\n'
+            table += "</html>"
+        else:
+            print ('no level data')
+            table += "</table>"
+            table += '</p>\n'
+            table += '</body>\n'
+            table += "</html>"
+
+    fileout.writelines(table)
+    fileout.close()
+    print('create_html_list_of_collection_level_2 end')
+
+
 def create_html_4_collection_list(title,data,file_name):
     print('create_html_4_collection_list')
     fileout = open(file_name, "w")
@@ -190,7 +264,7 @@ def create_html_4_collection_list(title,data,file_name):
     table += '\n<p>'
     table += "<table>\n"
     table += "  <tr>\n"
-    header = ['counter', 'id','name','description']
+    header = ['counter', 'id','mms_id','name','description']
     table += "  <tr>\n"
     for line in header:
         table += "    <td>{0}</td>\n".format(line)
@@ -200,16 +274,22 @@ def create_html_4_collection_list(title,data,file_name):
         table += "  <tr>\n"
         table += "    <td>{0}</td>\n".format(str(counter))
         table += "    <td>{0}</td>\n".format(str(line['pid']['value']))
+        table += "    <td>{0}</td>\n".format(str(line['mms_id']['value']))
         table += "    <td>{0}</td>\n".format(str(line['name']))
         table += "    <td>{0}</td>\n".format(str(line['description']))
         counter += 1
         table += "  </tr>\n"
+
     table += "</table>"
     table += '</p>\n'
     table += '</body>\n'
     table += "</html>"
     fileout.writelines(table)
     fileout.close()
+
+def create_html_for_collections_level_2(line):
+    print ('create_html_for_collections_level_2')
+    print('create_html_for_collections_level_2 end')
 
 
 def create_html_4_collection(title,data,file_name):
@@ -351,8 +431,9 @@ def retrieve_representation_file_details(image_dict):
 
 # test_api_key()
 print('retrieve collections')
-retrieve_collections()
+collections_list = retrieve_collections()
 print('start test on collection ID')
+retrieve_bibs_by_mms_id(collections_list)
 # קהאן הצלם 81164644630002791
 # קבוצת כנרת 81165295290002791
 collection_id = '81165295290002791'
