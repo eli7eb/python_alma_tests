@@ -156,7 +156,7 @@ def create_html_4_mms_id(mms_dict,title,file_name):
     table += '\n<p>'
     table += "<table>\n"
     table += "  <tr>\n"
-    header = ['index', 'id', 'description', 'delivery_url','thumbnail link', 'thumbnail image']
+    header = ['index', 'id', 'description', 'delivery_url','image link', 'image', 'thumbnail link', 'thumbnail image']
     table += "  <tr>\n"
     for line in header:
         table += "    <td>{0}</td>\n".format(line)
@@ -170,6 +170,10 @@ def create_html_4_mms_id(mms_dict,title,file_name):
         table += "    <td>{0}</td>\n".format(str(line['title']))
         delivery_link = '<a href = {0!s}>delivery</a>'.format(line['delivery_url'])
         table += "    <td>{0!s}</td>\n".format(delivery_link)
+        image_link = '<a href = {0!s}>image link</a>'.format(line['image_url'])
+        table += "    <td>{0!s}</td>\n".format(image_link)
+        size_image = '<img src = "{0!s}" alt = "image">'.format(line['image_url'])
+        table += "    <td>{0!s}</td>\n".format(size_image)
         thumb_link = '<a href = {0!s}>thumbnail</a>'.format(line['thumbnail_url'])
         table += "    <td>{0!s}</td>\n".format(thumb_link)
         thumb_image = '<img src = "{0!s}" alt = "image">'.format(line['thumbnail_url'])
@@ -354,9 +358,14 @@ def retrieve_digital_representations(colletion_id, mms_list_data):
         data_rep_list = data['representation'][0]
         title_item = {'title':l['title']}
         data_rep_list.update(title_item)
+        # add the correct link to the real size image
+        correct_size_image_url = str(data_rep_list['thumbnail_url']).replace('thumbnail/','')
+        image_url = {'image_url':correct_size_image_url}
+        data_rep_list.update(image_url)
+
         mms_dict[mms_id] = data_rep_list
         count += 1
-        if count == 150:
+        if count == 50:
             break
 
     mms_file_name = 'mms_list_collection_id_{0!s}.html'.format(colletion_id)
