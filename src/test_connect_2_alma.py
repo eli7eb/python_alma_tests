@@ -360,7 +360,7 @@ def retrieve_digital_representations(colletion_id, mms_list_data):
         data_rep_list.update(title_item)
         # add the correct link to the real size image
         correct_size_image_url = str(data_rep_list['thumbnail_url']).replace('thumbnail/','')
-        image_url = {'image_url':correct_size_image_url}
+        image_url = {'image_url': correct_size_image_url}
         data_rep_list.update(image_url)
 
         mms_dict[mms_id] = data_rep_list
@@ -438,8 +438,23 @@ def retrieve_representation_file_details(image_dict):
         data = alma_url_call(request_str,False)
         print(json.dumps(data, indent=4, sort_keys=True))
 
+
+#    נסי     להוריד    את    הסלש / אחרי    collections    כך    שיהיה:
+# https: // api - eu.hosted.exlibrisgroup.com / almaws / v1 / bibs / collections?level = 1 & apikey = l8xx7153483e1e9e4d7099e8bf9a406f4642
+def test_slash_after_collections():
+    print('test_slash_after_collections')
+    request_str = "https://api-eu.hosted.exlibrisgroup.com/almaws/v1/bibs/collections?level=1" + API_KEY
+    data = alma_url_call(request_str, False)
+    collections = data['collection']
+
+    print(json.dumps(data, indent=4, sort_keys=True))
+
+    print('test_slash_after_collections end')
+
+
 # test_api_key()
 print('retrieve collections')
+#test_slash_after_collections()
 collections_list = retrieve_collections()
 print('start test on collection ID')
 retrieve_bibs_by_mms_id(collections_list)
